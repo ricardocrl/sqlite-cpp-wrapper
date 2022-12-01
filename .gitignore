@@ -1,0 +1,7 @@
+# IDE project files
+.project
+.cproject
+.settings/
+
+# build output
+build/

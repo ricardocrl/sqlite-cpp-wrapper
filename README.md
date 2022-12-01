@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository includes a C++ SQLite library, built on top of the open-source project:
+C++ SQLite library built on top of the open-source project:
 https://github.com/SqliteModernCpp/sqlite_modern_cpp
 
 This project is added as a git submodule, in directory external/.
