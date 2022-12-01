@@ -4,19 +4,17 @@
 
 #include <cstddef>
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
 /**
- * @interface SqliteDb
+ * @interface IConnection
  * @brief Provides access to an on-disk SQLite database.
  */
-class SqliteDb
+class IConnection
 {
 public:
-    virtual ~SqliteDb() = default;
+    virtual ~IConnection() = default;
 
     /**
      * @brief Get the file path to the on-disk database this @c SqliteDb is binded to.
@@ -188,5 +186,4 @@ public:
     virtual double average(const std::string& table, const std::string& col, const KeyValues& filters = {}) = 0;
 };
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper

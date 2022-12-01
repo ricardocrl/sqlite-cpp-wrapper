@@ -1,22 +1,19 @@
 #pragma once
 
-#include "SqliteDb.hpp"
-
 #include "sqlite_modern_cpp.h"
 
+#include "IConnection.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
 /**
- * @class SqliteConnection
- * @brief Implements @c SqliteDb using [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp.)
+ * @class Connection
+ * @brief Implements @c IConnection using [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp.)
  *
  * This implementation allows read and write access to a DB file, concurrently.
  * An instance of this class instantiates a single DB connection. It can be used
@@ -29,10 +26,10 @@ namespace db
  * - Between connections where mutex instance are not shared, the concurrency handling is
  *   achieved using sqlite3_busy_timeout().
  */
-class SqliteConnection : public SqliteDb
+class Connection : public IConnection
 {
 public:
-    SqliteConnection(const std::string& databasePath);
+    Connection(const std::string& databasePath);
 
     const std::string& getDatabasePath() const override;
     bool open() override;
@@ -74,5 +71,4 @@ private:
     std::atomic<bool> mInTransaction;
 };
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper

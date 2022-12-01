@@ -1,4 +1,4 @@
-#include "SqliteConnection.hpp"
+#include "Connection.hpp"
 
 #include "SqliteTraits.hpp"
 
@@ -6,24 +6,22 @@
 #define DEBUG 0
 #endif
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
-SqliteConnection::SqliteConnection(const std::string& databasePath)
+Connection::Connection(const std::string& databasePath)
     : mDatabasePath{databasePath}
     , mDatabase{std::shared_ptr<sqlite3>(nullptr)}
     , mInTransaction{false}
 {
 }
 
-const std::string& SqliteConnection::getDatabasePath() const
+const std::string& Connection::getDatabasePath() const
 {
     return mDatabasePath;
 }
 
-bool SqliteConnection::open()
+bool Connection::open()
 {
     sqlite::sqlite_config config;
     config.flags = sqlite::OpenFlags::READWRITE | sqlite::OpenFlags::CREATE | sqlite::OpenFlags::FULLMUTEX;
@@ -42,17 +40,17 @@ bool SqliteConnection::open()
     return true;
 }
 
-bool SqliteConnection::isOpen() const
+bool Connection::isOpen() const
 {
     return mDatabase.connection() != nullptr;
 }
 
-void SqliteConnection::applySql(const std::string& sql)
+void Connection::applySql(const std::string& sql)
 {
     mDatabase << sql;
 }
 
-bool SqliteConnection::tableExists(const std::string& table)
+bool Connection::tableExists(const std::string& table)
 {
     // source: https://stackoverflow.com/a/1604121/5010785
     auto rows = select("sqlite_master", "name", {{"type", "table"}, {"name", table}});
@@ -65,7 +63,7 @@ bool SqliteConnection::tableExists(const std::string& table)
     return rows[0].front().has_value();
 }
 
-void SqliteConnection::beginTransaction(bool enableForeignKeys)
+void Connection::beginTransaction(bool enableForeignKeys)
 {
     mWriteMutex.lock();
     mInTransaction = true;
@@ -86,7 +84,7 @@ void SqliteConnection::beginTransaction(bool enableForeignKeys)
     mDatabase << query;
 }
 
-void SqliteConnection::commitTransaction()
+void Connection::commitTransaction()
 {
 #if DEBUG
     std::cout << "Built SQL: commit;" << std::endl;
@@ -97,7 +95,7 @@ void SqliteConnection::commitTransaction()
     mWriteMutex.unlock();
 }
 
-void SqliteConnection::rollbackTransaction()
+void Connection::rollbackTransaction()
 {
 #if DEBUG
     std::cout << "Built SQL: rollback;" << std::endl;
@@ -108,7 +106,7 @@ void SqliteConnection::rollbackTransaction()
     mWriteMutex.unlock();
 }
 
-Rows SqliteConnection::select(const std::string& table, const KeyValues& filters)
+Rows Connection::select(const std::string& table, const KeyValues& filters)
 {
     Rows rows; // will represent an array of size N-by-M
 
@@ -147,7 +145,7 @@ Rows SqliteConnection::select(const std::string& table, const KeyValues& filters
     return rows;
 }
 
-Rows SqliteConnection::select(const std::string& table, const std::string& col, const KeyValues& filters)
+Rows Connection::select(const std::string& table, const std::string& col, const KeyValues& filters)
 {
     Rows rows; // will represent an array of size N-by-1
 
@@ -162,30 +160,30 @@ Rows SqliteConnection::select(const std::string& table, const std::string& col, 
     return rows;
 }
 
-PrimaryKey SqliteConnection::insert(const std::string& table, const KeyValues& keyValues, bool transaction)
+PrimaryKey Connection::insert(const std::string& table, const KeyValues& keyValues, bool transaction)
 {
     return insertRow(table, keyValues, transaction, false);
 }
 
-PrimaryKeys SqliteConnection::insert(const std::string& table, const Rows& rows, bool transaction)
+PrimaryKeys Connection::insert(const std::string& table, const Rows& rows, bool transaction)
 {
     return insertRows(table, rows, transaction, false);
 }
 
-PrimaryKey SqliteConnection::insertOrReplace(const std::string& table, const KeyValues& keyValues, bool transaction)
+PrimaryKey Connection::insertOrReplace(const std::string& table, const KeyValues& keyValues, bool transaction)
 {
     return insertRow(table, keyValues, transaction, true);
 }
 
-PrimaryKeys SqliteConnection::insertOrReplace(const std::string& table, const Rows& rows, bool transaction)
+PrimaryKeys Connection::insertOrReplace(const std::string& table, const Rows& rows, bool transaction)
 {
     return insertRows(table, rows, transaction, true);
 }
 
-void SqliteConnection::update(const std::string& table,
-                              const KeyValues& keyValues,
-                              const KeyValues& filters,
-                              bool transaction)
+void Connection::update(const std::string& table,
+                        const KeyValues& keyValues,
+                        const KeyValues& filters,
+                        bool transaction)
 {
     lockWriteAccess(transaction);
 
@@ -195,7 +193,7 @@ void SqliteConnection::update(const std::string& table,
     unlockWriteAccess(transaction);
 }
 
-void SqliteConnection::deleteRows(const std::string& table, const KeyValues& filters, bool transaction)
+void Connection::deleteRows(const std::string& table, const KeyValues& filters, bool transaction)
 {
     lockWriteAccess(transaction);
 
@@ -205,12 +203,12 @@ void SqliteConnection::deleteRows(const std::string& table, const KeyValues& fil
     unlockWriteAccess(transaction);
 }
 
-std::size_t SqliteConnection::count(const std::string& table, const KeyValues& filters)
+std::size_t Connection::count(const std::string& table, const KeyValues& filters)
 {
     return count(table, "*", filters);
 }
 
-std::size_t SqliteConnection::count(const std::string& table, const std::string& col, const KeyValues& filters)
+std::size_t Connection::count(const std::string& table, const std::string& col, const KeyValues& filters)
 {
     std::size_t result{0};
     auto sql = SqliteTraits::SqlCount(table, col, filters);
@@ -218,7 +216,7 @@ std::size_t SqliteConnection::count(const std::string& table, const std::string&
     return result;
 }
 
-double SqliteConnection::sum(const std::string& table, const std::string& col, const KeyValues& filters)
+double Connection::sum(const std::string& table, const std::string& col, const KeyValues& filters)
 {
     double sum{0.0};
     auto sql = SqliteTraits::SqlSum(table, col, filters);
@@ -226,7 +224,7 @@ double SqliteConnection::sum(const std::string& table, const std::string& col, c
     return sum;
 }
 
-double SqliteConnection::average(const std::string& table, const std::string& col, const KeyValues& filters)
+double Connection::average(const std::string& table, const std::string& col, const KeyValues& filters)
 {
     double average{0.0};
     auto sql = SqliteTraits::SqlAvg(table, col, filters);
@@ -234,12 +232,12 @@ double SqliteConnection::average(const std::string& table, const std::string& co
     return average;
 }
 
-void SqliteConnection::connectionHook()
+void Connection::connectionHook()
 {
     sqlite3_busy_timeout(mDatabase.connection().get(), kBusyTimeoutMs);
 }
 
-void SqliteConnection::lockWriteAccess(bool partOfTransaction)
+void Connection::lockWriteAccess(bool partOfTransaction)
 {
     if (!mInTransaction || (mInTransaction && !partOfTransaction))
     {
@@ -247,7 +245,7 @@ void SqliteConnection::lockWriteAccess(bool partOfTransaction)
     }
 }
 
-void SqliteConnection::unlockWriteAccess(bool partOfTransaction)
+void Connection::unlockWriteAccess(bool partOfTransaction)
 {
     if (!partOfTransaction)
     {
@@ -255,8 +253,7 @@ void SqliteConnection::unlockWriteAccess(bool partOfTransaction)
     }
 }
 
-PrimaryKey
-SqliteConnection::insertRow(const std::string& table, const KeyValues& keyValues, bool transaction, bool replace)
+PrimaryKey Connection::insertRow(const std::string& table, const KeyValues& keyValues, bool transaction, bool replace)
 {
     lockWriteAccess(transaction);
 
@@ -268,7 +265,7 @@ SqliteConnection::insertRow(const std::string& table, const KeyValues& keyValues
     return key;
 }
 
-PrimaryKeys SqliteConnection::insertRows(const std::string& table, const Rows& rows, bool transaction, bool replace)
+PrimaryKeys Connection::insertRows(const std::string& table, const Rows& rows, bool transaction, bool replace)
 {
     PrimaryKeys primaryKeys;
 
@@ -291,7 +288,7 @@ PrimaryKeys SqliteConnection::insertRows(const std::string& table, const Rows& r
     return primaryKeys;
 }
 
-PrimaryKey SqliteConnection::executePPS(sqlite::database_binder& pps, const Row& row)
+PrimaryKey Connection::executePPS(sqlite::database_binder& pps, const Row& row)
 {
     PrimaryKey primaryKey;
 
@@ -313,5 +310,4 @@ PrimaryKey SqliteConnection::executePPS(sqlite::database_binder& pps, const Row&
     return primaryKey;
 }
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper

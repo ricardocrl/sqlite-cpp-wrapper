@@ -6,9 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
 class SqliteTraits
@@ -45,5 +43,4 @@ private:
     static std::string SqlAssignment(const KeyValue& kv);
 };
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper

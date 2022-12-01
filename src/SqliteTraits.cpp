@@ -4,9 +4,7 @@
 
 #include <algorithm>
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
 std::string SqliteTraits::SqlSelect(const std::string& table, const std::string& col, const KeyValues& filters)
@@ -155,5 +153,4 @@ std::string SqliteTraits::SqlAssignment(const KeyValue& keyValue)
     return keyValue.key() + "=" + (keyValue.value() ? StringUtils::Quote(*keyValue.value()) : "NULL");
 }
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper

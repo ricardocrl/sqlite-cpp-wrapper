@@ -6,9 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace base_services
-{
-namespace db
+namespace sqlite_wrapper
 {
 
 using PrimaryKey  = int64_t;
@@ -89,5 +87,4 @@ private:
 
 using KeyValues = std::list<KeyValue>;
 
-} // namespace db
-} // namespace base_services
+} // namespace sqlite_wrapper
