@@ -2,23 +2,23 @@
 
 ## Overview
 
-C++ SQLite library built on top of the open-source project:
+C++ SQLite library that wraps the open-source project:
 https://github.com/SqliteModernCpp/sqlite_modern_cpp
 
-This project is added as a git submodule, in directory external/.
-It also requires library sqlite3.
+This implementation offers **thread-safe DB file read/write access, through class `sqlite_wrapper::Connection`**.
 
-This implementation allows read and write access to a DB file, concurrently, through class `sqlite_wrapper::Connection`.
 An instance of this class instantiates a single DB connection. It can be used concurrently from multiple threads for both reads, writes and transactions.
-Multiple instances of this class also allow concurrent read  and write access.
+Multiple instances of this class are also allowed to be used concurrently.
 
 Write access is allowed using two mechanisms:
 - Transactions and individual writes in the same connection from multiple threads are possible by protecting any writes (individual operations and full-transaction) with the same mutex.
 - Between connections where mutex instance are not shared, the concurrency handling is achieved using sqlite3_busy_timeout().
 
+For a comprehensive usage of the library under multi-threading context, refer to the unit-tests.
+
 ## Using the Library
 
-```
+```cpp
 // Setting up DB table - sqlite_modern_cpp only
 
 const char* testTable = "test_table";
