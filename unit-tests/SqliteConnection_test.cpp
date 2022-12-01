@@ -66,13 +66,13 @@ struct TestSqliteConcurrency : public Test
 
             db::Rows rows;
 
-            rows = mConnections[connectionId]->select(TestTable, db::KeyValues{{"number", "3"}});
+            rows = mConnections[connectionId]->select(TestTable, db::KeyValues{{"number", 3}});
             EXPECT_EQ(rows[0], (db::Row{"3", "three"}));
 
-            rows = mConnections[connectionId]->select(TestTable, "string", db::KeyValues{{"number", "9"}});
+            rows = mConnections[connectionId]->select(TestTable, "string", db::KeyValues{{"number", 9}});
             EXPECT_EQ(rows[0][0].value(), "nine");
 
-            rows = mConnections[connectionId]->select(TestTable, "number", db::KeyValues{{"number", "10"}});
+            rows = mConnections[connectionId]->select(TestTable, "number", db::KeyValues{{"number", 10}});
             EXPECT_TRUE(rows.empty());
 
             if (transaction)
@@ -84,26 +84,25 @@ struct TestSqliteConcurrency : public Test
     {
         for (auto i = 0; i < count / 2; ++i)
         {
-            (void)threadId;
             //            std::cout << "Thread " + std::to_string(threadId) << ": " << std::to_string(i) << std::endl;
             if (transaction)
                 mConnections[connectionId]->beginTransaction(true);
 
             auto threadSpecific = ((threadId == 0) ? "zero" : "one");
-            auto numberStr1     = std::to_string(rand());
-            auto numberStr2     = std::to_string(rand());
+            auto number1        = rand();
+            auto number2        = rand();
 
             // Testing different column updates between threads
             mConnections[connectionId]->update(
-                TestTable, {{"number", numberStr1}}, {{"string", threadSpecific}}, transaction);
+                TestTable, {{"number", number1}}, {{"string", threadSpecific}}, transaction);
             auto val1
                 = mConnections[connectionId]->select(TestTable, "number", db::KeyValues{{"string", threadSpecific}});
 
             // Testing same column updates between threads
-            mConnections[connectionId]->update(TestTable, {{"number", numberStr2}}, {{"string", "two"}}, transaction);
+            mConnections[connectionId]->update(TestTable, {{"number", number2}}, {{"string", "two"}}, transaction);
             auto val2 = mConnections[connectionId]->select(TestTable, "number", db::KeyValues{{"string", "two"}});
             EXPECT_FALSE(val1.empty());
-            EXPECT_EQ(val1[0][0].value(), numberStr1);
+            EXPECT_EQ(val1[0][0].value(), std::to_string(number1));
 
             if (transaction)
                 mConnections[connectionId]->commitTransaction();
@@ -119,18 +118,20 @@ struct TestSqliteConcurrency : public Test
             if (transaction)
                 mConnections[connectionId]->beginTransaction(true);
 
-            auto numberStr = std::to_string(rand());
-            auto pk        = mConnections[connectionId]->insertOrReplace(
+            auto number    = rand();
+            auto numberStr = std::to_string(number);
+
+            auto pk = mConnections[connectionId]->insertOrReplace(
                 TestTable, db::Rows{{numberStr, "randomNumber" + numberStr}}, transaction);
 
-            auto numberStrReplace = std::to_string(stoi(numberStr) + 1);
-            mConnections[connectionId]->insertOrReplace(TestTable,
-                                                        db::KeyValues{{"rowid", std::to_string(pk[0])},
-                                                                      {"number", numberStr},
-                                                                      {"string", "randomNumber" + numberStrReplace}},
-                                                        transaction);
+            auto numberStrReplace = std::to_string(number + 1);
 
-            auto rows = mConnections[connectionId]->select(TestTable, "string", {{"number", numberStr}});
+            mConnections[connectionId]->insertOrReplace(
+                TestTable,
+                db::KeyValues{{"rowid", pk[0]}, {"number", number}, {"string", "randomNumber" + numberStrReplace}},
+                transaction);
+
+            auto rows = mConnections[connectionId]->select(TestTable, "string", {{"number", number}});
             EXPECT_FALSE(rows[0].empty());
             EXPECT_EQ("randomNumber" + numberStrReplace, rows[0][0].value());
 
@@ -148,13 +149,18 @@ struct TestSqliteConcurrency : public Test
             if (transaction)
                 mConnections[connectionId]->beginTransaction(true);
 
-            auto numberStr = std::to_string(rand());
-            mConnections[connectionId]->insert(
-                TestTable, db::Rows{{numberStr, "randomNumber" + numberStr}}, transaction);
+            auto number1    = rand();
+            auto number2    = rand();
+            auto number1Str = std::to_string(number1);
+            auto number2Str = std::to_string(number2);
 
-            numberStr = std::to_string(rand());
+            // insert with "multiple rows" overload
             mConnections[connectionId]->insert(
-                TestTable, db::KeyValues{{"number", numberStr}, {"string", "randomNumber" + numberStr}}, transaction);
+                TestTable, db::Rows{{number1Str, "randomNumber" + number1Str}}, transaction);
+
+            // insert with "1 row" overload with key-value
+            mConnections[connectionId]->insert(
+                TestTable, db::KeyValues{{"number", number2}, {"string", "randomNumber" + number2Str}}, transaction);
 
             if (transaction)
                 mConnections[connectionId]->commitTransaction();
@@ -170,11 +176,13 @@ struct TestSqliteConcurrency : public Test
             if (transaction)
                 mConnections[connectionId]->beginTransaction(true);
 
-            auto numberStr = std::to_string(rand());
+            auto number    = rand();
+            auto numberStr = std::to_string(number);
+
             mConnections[connectionId]->insert(
                 TestTable, db::Rows{{numberStr, "randomNumber" + numberStr}}, transaction);
 
-            auto rows = mConnections[connectionId]->select(TestTable, {{"number", numberStr}});
+            auto rows = mConnections[connectionId]->select(TestTable, {{"number", number}});
             EXPECT_EQ(rows[0][1].value(), "randomNumber" + rows[0][0].value());
 
             if (transaction)
@@ -191,10 +199,12 @@ struct TestSqliteConcurrency : public Test
             if (transaction)
                 mConnections[connectionId]->beginTransaction(true);
 
-            auto numberStr = std::to_string(rand());
+            auto number    = rand();
+            auto numberStr = std::to_string(number);
+
             mConnections[connectionId]->insert(
                 TestTable, db::Rows{{numberStr, "randomNumber" + numberStr}}, transaction);
-            mConnections[connectionId]->deleteRows(TestTable, db::KeyValues{{"number", numberStr}}, transaction);
+            mConnections[connectionId]->deleteRows(TestTable, db::KeyValues{{"number", number}}, transaction);
 
             if (transaction)
                 mConnections[connectionId]->commitTransaction();
