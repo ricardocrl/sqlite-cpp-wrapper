@@ -8,15 +8,46 @@ https://github.com/SqliteModernCpp/sqlite_modern_cpp
 This project is added as a git submodule, in directory external/.
 It also requires library sqlite3.
 
-The main goal of this repo is to provide a SqliteConnection class, which represents a single SQLite connection.
-
-This implementation allows read and write access to a DB file, concurrently.
+This implementation allows read and write access to a DB file, concurrently, through class `sqlite_wrapper::Connection`.
 An instance of this class instantiates a single DB connection. It can be used concurrently from multiple threads for both reads, writes and transactions.
 Multiple instances of this class also allow concurrent read  and write access.
 
 Write access is allowed using two mechanisms:
 - Transactions and individual writes in the same connection from multiple threads are possible by protecting any writes (individual operations and full-transaction) with the same mutex.
 - Between connections where mutex instance are not shared, the concurrency handling is achieved using sqlite3_busy_timeout().
+
+## Using the Library
+
+```
+// Setting up DB table - sqlite_modern_cpp only
+
+const char* testTable = "test_table";
+sqlite::sqlite_config config;
+config.flags        = sqlite::OpenFlags::READWRITE | sqlite::OpenFlags::CREATE;
+
+sqlite::database db = sqlite::database("test.db", config);
+db << "CREATE TABLE test_table (number INTEGER, string TEXT);";
+
+// Using SQLite C++ wrapper
+
+// Create connection
+auto connection = db::SqliteConnection("test.db");
+
+// Insert N rows
+auto keys = connection->insert(testTable, db::Rows{{"0", "zero"}, {"1", "one"}, {"2", "two"}, {"3", "three"}, {"4", "four"}}, false);
+
+// Insert 1 row
+auto key = connection->insert(testTable, db::KeyValues{{"number", 5}, {"string", "five"}}, false);
+
+// Select example
+rows = connection->select(testTable, db::KeyValues{{"number", 3}});
+
+// Transaction example
+bool foreignKeys = true;
+connections->beginTransaction(foreignKeys);
+connections->update(testTable, {{"number", 3}}, {{"string", "trois"}}, true);
+connections->commitTransaction();
+```
 
 ## Requirements
 
